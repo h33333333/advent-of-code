@@ -3,7 +3,7 @@ use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-fn calculate_perimeter_for_region(region: &HashSet<(usize, usize)>) -> usize {
+fn calculate_perimeter_for_region(region: &HashSet<(isize, isize)>) -> usize {
     let mut perimeter = 0;
     for (row_idx, col_idx) in region {
         let mut cell_perimeter = 4;
@@ -25,6 +25,52 @@ fn calculate_perimeter_for_region(region: &HashSet<(usize, usize)>) -> usize {
     perimeter
 }
 
+fn calculate_corners_for_region(region: &HashSet<(isize, isize)>) -> usize {
+    let mut corners = 0;
+    for (row_idx, col_idx) in region.iter().copied() {
+        let mut cell_corners = 0;
+
+        let all_corners = [
+            // Top left
+            [
+                region.contains(&(row_idx - 1, col_idx)),
+                region.contains(&(row_idx - 1, col_idx - 1)),
+                region.contains(&(row_idx, col_idx - 1)),
+            ],
+            // Bottom left
+            [
+                region.contains(&(row_idx, col_idx - 1)),
+                region.contains(&(row_idx + 1, col_idx - 1)),
+                region.contains(&(row_idx + 1, col_idx)),
+            ],
+            // Bottom right
+            [
+                region.contains(&(row_idx + 1, col_idx)),
+                region.contains(&(row_idx + 1, col_idx + 1)),
+                region.contains(&(row_idx, col_idx + 1)),
+            ],
+            // Top right
+            [
+                region.contains(&(row_idx, col_idx + 1)),
+                region.contains(&(row_idx - 1, col_idx + 1)),
+                region.contains(&(row_idx - 1, col_idx)),
+            ],
+        ];
+        for corner_idxs in all_corners {
+            if corner_idxs == [true, false, true]
+                || corner_idxs == [false, false, false]
+                || corner_idxs == [false, true, false]
+            {
+                cell_corners += 1;
+            }
+        }
+
+        corners += cell_corners
+    }
+
+    corners
+}
+
 fn main() {
     let input_path = env::args().nth(1).expect("input file path is missing");
     let input_file = File::open(&input_path).expect("error while reading the file");
@@ -38,7 +84,7 @@ fn main() {
         })
         .collect::<Vec<_>>();
 
-    let mut regions: HashMap<i32, HashSet<(usize, usize)>> = HashMap::new();
+    let mut regions: HashMap<i32, HashSet<(isize, isize)>> = HashMap::new();
     let mut seen: HashSet<(usize, usize)> = HashSet::new();
     let mut item_queue = VecDeque::from(vec![(0, 0)]);
     let mut current_region = 0;
@@ -70,15 +116,26 @@ fn main() {
                 }
 
                 seen.insert((row_idx, col_idx));
-                region.insert((row_idx, col_idx));
+                region.insert((row_idx as isize, col_idx as isize));
             }
 
             current_region += 1;
         }
     }
 
-    dbg!(regions
-        .values()
-        .map(|region| region.len() * calculate_perimeter_for_region(region))
-        .sum::<usize>());
+    println!(
+        "part 1: {}",
+        regions
+            .values()
+            .map(|region| region.len() * calculate_perimeter_for_region(region))
+            .sum::<usize>()
+    );
+
+    println!(
+        "part 2: {}",
+        regions
+            .values()
+            .map(|region| { region.len() * calculate_corners_for_region(region) })
+            .sum::<usize>()
+    );
 }
